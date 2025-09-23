@@ -14,14 +14,28 @@ return new class extends Migration
         Schema::create('contacts', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email');
+            $table->string('phone')->nullable();
+            $table->string('email');       
             $table->string('subject');
-            $table->text('message');
+            $table->string('business_name')->nullable();
+            $table->string('business_category')->nullable();
+            $table->text('address')->nullable();
+            $table->longText('message');
             $table->timestamps();
 
-            $table->index(['email']); // For email-based lookups
-            $table->index(['created_at']); 
-            $table->index(['email', 'created_at']); 
+
+            $table->index('name');
+            $table->index('email');
+            $table->index('phone');
+            $table->index('business_category');
+            $table->index('created_at');
+            $table->index(['email', 'created_at']);
+            $table->index(['business_category', 'created_at', 'id']);
+            $table->index(['created_at', 'id']);
+            $table->index(['name', 'created_at']);
+            $table->index(['business_category', 'name']);
+            $table->index(['id', 'created_at']);
+            $table->fullText(['name', 'business_name', 'subject', 'message']);
         });
     }
 
