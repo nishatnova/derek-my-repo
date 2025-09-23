@@ -17,7 +17,11 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Notifications\SendPasswordResetCode;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -273,9 +277,129 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * Update user's name and email.
+     */
+    public function updateProfile(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                 return $this->sendError('User not found.', [], 404);
+            }
+            
+            $jsonData = $request->input('data');
+            if (!$jsonData || !($data = json_decode($jsonData, true))) {
+                 return $this->sendError('Invalid user data format', [], 400);
+            }
 
-    
+            $rules = [
+                'name'  => ['nullable', 'string', 'max:255'],
+                'email' => ['nullable', 'email', 'unique:users,email,' . $user->id],
+                'phone' => ['nullable', 'string', 'max:20'],
+            ];
+            
+            $validator = Validator::make($data, $rules);
+            if ($validator->fails()) {
+                return $this->sendError($validator->errors()->first(), [], 400);
+            }
 
-    
+            if ($request->hasFile('profile_photo')) {
+                $fileValidator = Validator::make(['file' => $request->file('profile_photo')], [
+                    'file' => ['image', 'mimes:jpeg,png,jpg,gif,svg,webp', 'max:5240']
+                ]);
+                
+                if ($fileValidator->fails()) {
+                    return $this->sendError($fileValidator->errors()->first(), [], 400);
+                }
+            }
+            
+            $updates = [];
+            
+            foreach (['name', 'email', 'phone'] as $field) {
+                if (isset($data[$field]) && !empty(trim($data[$field]))) {
+                    $updates[$field] = trim($data[$field]);
+                }
+            }
+            
+            $oldPhotoPath = null;
+            if ($request->hasFile('profile_photo')) {
+                $oldPhotoPath = $user->getRawOriginal('profile_photo');
+                
+                $file = $request->file('profile_photo');
+                $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+
+                $path = $file->storeAs('profile_photos', $filename, 'public');
+                $updates['profile_photo'] = 'storage/' . $path;
+            }
+            
+            if (!empty($updates)) {
+                DB::table('users')
+                    ->where('id', $user->id)
+                    ->update($updates + ['updated_at' => now()]);
+                
+                foreach ($updates as $key => $value) {
+                    $user->{$key} = $value;
+                }
+            }
+            
+            if ($oldPhotoPath && $oldPhotoPath !== 'profile_photos/user.png') {
+                dispatch(function() use ($oldPhotoPath) {
+                    $storagePath = str_replace('storage/', '', $oldPhotoPath);
+                    if (Storage::disk('public')->exists($storagePath)) {
+                        Storage::disk('public')->delete($storagePath);
+                    }
+                })->afterResponse();
+            }
+            
+
+            return $this->sendResponse([
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'profile_photo' => $user->profile_photo,
+            ], 'Profile updated successfully.');
+            
+        } catch (ValidationException $e) {
+            return $this->sendError($e->validator->errors()->first(), [], 400);
+        } catch (\Exception $e) {
+             Log::error("Error updating profile: " . $e->getMessage());
+             return $this->sendError('Error updating profile.' . $e->getMessage(), [], 500);
+        }
+    }
+
+
+    public function getUserDetails()
+    {
+        try {
+            
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return $this->sendError('User not authenticated.', [], 401);
+            }
+
+            $userDetails = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'profile_photo' => $user->profile_photo,
+            ];
+
+            return $this->sendResponse($userDetails, 'Profile retrieved successfully.');
+
+        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+            return $this->sendError('Token has expired.', [], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+            return $this->sendError('Invalid token.', [], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
+            return $this->sendError('Token not provided.', [], 401);
+        } catch (\Exception $e) {
+            return $this->sendError('An unexpected error occurred while fetching profile. Please try again later.', [], 500);
+        }
+    }
+
     
 }
