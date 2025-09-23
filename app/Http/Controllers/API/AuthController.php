@@ -26,44 +26,6 @@ class AuthController extends Controller
 {
     use ResponseTrait;
 
-    public function register(Request $request)
-    {
-        try {
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email',
-                'password' => 'required|string|min:8',
-            ]);
-
-            $defaultProfilePhoto = 'profile_photos/user.png';
-
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'profile_photo' => $defaultProfilePhoto,
-                'role' => 'user',
-            ]);
-
-            $user->profile_photo = asset($defaultProfilePhoto);
-
-            $token = JWTAuth::fromUser($user);
-
-            return $this->sendResponse([
-                'token' => $token,
-                'user' => $user
-            ], 'User account created successfully', 201);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            $errorMessage = $e->validator->errors()->first();
-            return $this->sendError($errorMessage, [], 400);
-        }catch (\Exception $e) {
-            return $this->sendError('Error during registration'.$e->getMessage(), [], 500);
-        }
-    }
-
-    
-
     public function login(Request $request)
     {
         try {
@@ -89,7 +51,7 @@ class AuthController extends Controller
                 'token' => $accessToken,
                 'refresh_token' => $refreshToken,
                 'token_type' => 'bearer',
-                'expires_in' => auth('api')->factory()->getTTL() * 60, 
+                'expires_in' => JWTAuth::factory()->getTTL() * 60, 
                 'user' => auth('api')->user(),
             ], 'Login successful.');
 
@@ -100,69 +62,12 @@ class AuthController extends Controller
         }
     }
 
-    public function googleLogin(Request $request)
-    {
-        try {
-            $request->validate([
-                'email' => 'required|email',
-                'name' => 'required|string',
-                'profile_photo' => 'required|string',
-            ]);
-
-            $userData = [
-                'name' => $request->name,
-                'profile_photo' => $request->profile_photo,
-            ];
-
-            if (!User::where('email', $request->email)->exists()) {
-                $userData['password'] = Hash::make(\Illuminate\Support\Str::random(16));
-                $userData['role'] = 'user';
-            }
-
-            $user = User::updateOrCreate(
-                ['email' => $request->email],
-                $userData
-            );
-            // Generate access and refresh tokens
-            JWTAuth::factory()->setTTL(2880); // 2 days
-            $accessToken = JWTAuth::fromUser($user);
-
-            JWTAuth::factory()->setTTL(20160); // 2 weeks
-            $refreshToken = JWTAuth::fromUser($user);
-
-            // Set the access token in a secure cookie
-            $cookie = Cookie::make(
-                'access_token',
-                $accessToken,
-                2880, // Expiration in minutes (2 days)
-                '/',
-                null,
-                true,
-                true,
-                false,
-                'Strict'
-            );
-
-            return $this->sendResponse([
-            'token' => $accessToken,
-            'refresh_token' => $refreshToken,
-            'token_type' => 'bearer',
-            'expires_in' => auth('api')->factory()->getTTL() * 60,
-            'user' => $user,
-            ], 'Logged in successfully.', 200)->cookie($cookie);;
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return $this->sendError($e->validator->errors()->first(), [], 400);
-        } catch (\Exception $e) {
-            return $this->sendError('Error during Google login '. $e->getMessage(), [], 500);
-        }
-    }
-
+    
     // Logout method
     public function logout()
     {
         try {
-            auth()->logout();
+            JWTAuth::invalidate(JWTAuth::getToken());
             
             return $this->sendResponse([], 'Logged out successfully.');
         } catch (\Exception $e) {
@@ -239,14 +144,11 @@ class AuthController extends Controller
                 'new_password' => 'required|string|min:6|confirmed',
             ]);
 
-            // Check if the current password matches
-            if (!Hash::check($request->current_password, auth()->user()->password)) {
+            if (!Hash::check($request->current_password, Auth::user()->password)) {
                 return $this->sendError('Current password is incorrect.', []);
             }
 
-
-            // Update the password
-            $user = auth()->user();
+            $user = Auth::user();
             $user->password = Hash::make($request->new_password);
             $user->save();
 
@@ -281,7 +183,7 @@ class AuthController extends Controller
             return $this->sendResponse([
                 'token' => $newToken,
                 'token_type' => 'bearer',
-                'expires_in' => auth('api')->factory()->getTTL() * 60,
+                'expires_in' => JWTAuth::factory()->getTTL() * 60,
             ], 'Token refreshed successfully.');
         } catch (\Exception $e) {
             return $this->sendError('Error refreshing token.', [], 500);
