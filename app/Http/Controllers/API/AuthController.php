@@ -7,20 +7,17 @@ use Illuminate\Http\Request;
 use App\Traits\ResponseTrait;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Cookie;
+
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\WelcomeEmail;
-use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Str;
+use App\Models\PasswordResetCode;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Auth\Events\Verified;
-use Illuminate\Support\Facades\URL;
-use App\Models\Tenant;
+use App\Notifications\SendPasswordResetCode;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class AuthController extends Controller
 {
@@ -51,8 +48,6 @@ class AuthController extends Controller
                 'token' => $accessToken,
                 'refresh_token' => $refreshToken,
                 'token_type' => 'bearer',
-                'expires_in' => JWTAuth::factory()->getTTL() * 60, 
-                'user' => auth('api')->user(),
             ], 'Login successful.');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -79,29 +74,107 @@ class AuthController extends Controller
     public function forgotPassword(Request $request)
     {
         try {
-            $request->validate([
+            $validated = $request->validate([
                 'email' => 'required|email|exists:users,email',
             ], [
                 'email.exists' => 'User not found with this email address.',
             ]);
 
-            $status = Password::broker()->sendResetLink(
-                $request->only('email'),
-                function ($user, $token) {
-                    $user->notify(new ResetPasswordNotification($token));
-                }
-            );
-
-            if ($status === Password::RESET_LINK_SENT) {
-                return $this->sendResponse([], 'Password reset link sent to your email.');
+            $emailCacheKey = "forgot_password:{$validated['email']}";
+            $emailAttempts = Cache::get($emailCacheKey, 0);
+            
+            if ($emailAttempts >= 30) {
+                return $this->sendError('Too many password reset requests. Please try again in 15 minutes.', [], 429);
             }
 
-            return $this->sendError('Failed to send reset link. Please try again later.', []);
+            $ipCacheKey = "forgot_password_ip:" . $request->ip();
+            $ipAttempts = Cache::get($ipCacheKey, 0);
+            
+            if ($ipAttempts >= 40) {
+                return $this->sendError('Too many requests from this IP. Please try again later.', [], 429);
+            }
+
+            $result = DB::transaction(function () use ($validated, $emailCacheKey, $ipCacheKey) {
+                PasswordResetCode::where('email', $validated['email'])->delete();
+
+                $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+                PasswordResetCode::create([
+                    'email' => $validated['email'],
+                    'code' => $code,
+                    'expires_at' => now()->addMinutes(10),
+                ]);
+
+                Cache::put($emailCacheKey, Cache::get($emailCacheKey, 0) + 1, now()->addMinutes(15));
+                Cache::put($ipCacheKey, Cache::get($ipCacheKey, 0) + 1, now()->addHour());
+
+                return $code;
+            });
+
+            $user = new \stdClass();
+            $user->email = $validated['email'];
+            Notification::route('mail', $validated['email'])
+                ->notify((new SendPasswordResetCode($result))->onQueue('emails'));
+
+            return $this->sendResponse([], 'Verification code sent to your email.');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return $this->sendError('Validation error: ' . $e->getMessage(), 422);
+            return $this->sendError($e->validator->errors()->first(), [], 422);
         } catch (\Exception $e) {
-            return $this->sendError('An error occurred during the forgot password process.' .$e->getMessage(), []);
+            return $this->sendError('An error occurred during the forgot password process.' . $e->getMessage(), []);
+        }
+    }
+
+    public function verifyCode(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'code' => 'required|string|size:6',
+                'email' => 'required|email|exists:users,email',
+            ], [
+                'email.exists' => 'User not found with this email address.',
+            ]);
+
+            $cacheKey = "verify_attempts:{$validated['email']}";
+            $attempts = Cache::get($cacheKey, 0);
+            
+            if ($attempts >= 30) {
+                return $this->sendError('Too many verification attempts. Please try again in 15 minutes.', [], 429);
+            }
+
+            $result = DB::transaction(function () use ($validated, $cacheKey) {
+                $resetCode = PasswordResetCode::where([
+                    ['email', $validated['email']],
+                    ['code', $validated['code']],
+                    ['is_used', false],
+                    ['expires_at', '>', now()]
+                ])->lockForUpdate()->first();
+
+                if (!$resetCode) {
+                    Cache::put($cacheKey, Cache::get($cacheKey, 0) + 1, now()->addMinutes(15));
+                    throw new \Exception('Invalid or expired verification code.');
+                }
+
+                Cache::forget($cacheKey);
+
+                $token = Str::random(64);
+                $resetCode->update(['code' => $token]);
+
+                return $token;
+            });
+
+            return $this->sendResponse([
+                'token' => $result,
+                'email' => $validated['email']
+            ], 'Code verified successfully. You can now reset your password.');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->sendError($e->validator->errors()->first(), [], 422);
+        } catch (\Exception $e) {
+            $message = $e->getMessage() === 'Invalid or expired verification code.' 
+                ? 'Invalid or expired verification code.'
+                : 'An error occurred during code verification.' . $e->getMessage();
+            return $this->sendError($message, [], 422);
         }
     }
 
