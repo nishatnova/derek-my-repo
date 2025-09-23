@@ -10,6 +10,7 @@ use App\Http\Controllers\API\UserController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/verify-code', [AuthController::class, 'verifyCode']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);    
 Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
 Route::get('/users/{userId}/detail', [UserController::class, 'getUserDetails']);

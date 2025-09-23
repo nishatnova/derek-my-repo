@@ -182,32 +182,42 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         try {
-            $request->validate([
-                'token' => 'required',
+            $validated = $request->validate([
                 'email' => 'required|email|exists:users,email',
+                'token' => 'required|string',
                 'password' => 'required|string|min:6|confirmed',
+            ], [
+                'email.exists' => 'User not found with this email address.',
             ]);
 
-            $status = Password::reset(
-                $request->only('email', 'password', 'password_confirmation', 'token'),
-                function ($user, $password) {
-                    $user->password = Hash::make($password);
-                    $user->save();
-                }
-            );
+            $resetCode = PasswordResetCode::where([
+                ['email', $validated['email']],
+                ['code', $validated['token']],
+                ['is_used', false],
+                ['expires_at', '>', now()]
+            ])->first();
 
-            if ($status === Password::PASSWORD_RESET) {
-                return $this->sendResponse([], 'Password has been reset successfully.');
+            if (!$resetCode) {
+                return $this->sendError('Invalid or expired reset token.', [], 422);
             }
 
-            return $this->sendError('Failed to reset password.', []);
+
+            DB::transaction(function () use ($validated, $resetCode) {
+                
+                User::where('email', $validated['email'])
+                    ->update(['password' => Hash::make($validated['password'])]);
+                
+                $resetCode->update(['is_used' => true]);
+            });
+
+            return $this->sendResponse([], 'Password has been reset successfully.');
+
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return $this->sendError($e->validator->errors()->first(), []);
+            return $this->sendError($e->validator->errors()->first(), [], 422);
         } catch (\Exception $e) {
-            return $this->sendError('An error occurred during the password reset process.' .$e->getMessage(), []);
+            return $this->sendError('An error occurred during the password reset process.' . $e->getMessage(), []);
         }
     }
-
 
     public function updatePassword(Request $request)
     {
