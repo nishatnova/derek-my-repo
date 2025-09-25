@@ -142,9 +142,8 @@ return [
     */
 
     'redis' => [
-
-        'client' => env('REDIS_CLIENT', 'phpredis'),
-
+        'client' => env('REDIS_CLIENT', 'phpredis'), // Use phpredis
+        
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
             'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
@@ -153,21 +152,33 @@ return [
         'default' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
-            'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
+            // PhpRedis specific options
+            'read_timeout' => 60,
+            'context' => [
+                // ssl context options
+            ],
         ],
 
         'cache' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
-            'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
+            'read_timeout' => 60,
         ],
 
+        'session' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_SESSION_DB', '2'),
+            'read_timeout' => 60,
+        ],
     ],
 
 ];

@@ -36,12 +36,4 @@ class Contact extends Model
         });
     }
 
-    public function scopeFilterByCategory(Builder $query, ?string $category): Builder
-    {
-        if (empty($category)) {
-            return $query;
-        }
-
-        return $query->where('business_category', $category);
-    }
 }
