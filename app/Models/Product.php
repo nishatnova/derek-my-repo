@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class Product extends Model
 {
     use HasFactory;
-    
+
     protected $fillable = [
         'name',
         'category',
@@ -33,10 +33,10 @@ class Product extends Model
 
     public const CATEGORIES = [
         'football',
+        'swimming',
         'soccer',
         'basketball',
         'tennis',
-        'swimming',
         'ice_skating',
         'cheerleader',
         'referee',
