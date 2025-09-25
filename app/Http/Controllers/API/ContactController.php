@@ -102,16 +102,13 @@ class ContactController extends Controller
             // Clear contact list cache - simplified approach
             $this->clearContactsCache();
 
-            // Send email with better error handling
             $adminEmail = config('mail.admin_email');
             if ($adminEmail && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
                 try {
-                    // Send immediately for debugging (remove dispatch for now)
                     Mail::to($adminEmail)->send(new ContactUsMail($contact));
                     Log::info('Contact email sent successfully to: ' . $adminEmail);
                 } catch (\Exception $e) {
                     Log::error('Failed to send contact email: ' . $e->getMessage());
-                    // Don't fail the request, just log the error
                 }
             } else {
                 Log::warning('ADMIN_EMAIL not set or invalid: ' . ($adminEmail ?? 'null'));
@@ -136,10 +133,8 @@ class ContactController extends Controller
     private function clearContactsCache()
     {
         try {
-            // Simple cache clearing approach that works with any cache driver
-            Cache::flush(); // This will clear all cache - you can optimize this later
+            Cache::flush(); 
         } catch (\Exception $e) {
-            // If cache clearing fails, log it but don't break the flow
             Log::warning('Failed to clear contacts cache: ' . $e->getMessage());
         }
     }
