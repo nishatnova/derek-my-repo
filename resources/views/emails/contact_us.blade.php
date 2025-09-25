@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact Us Form Submitted Successfully</title>
+    <title>New Contact Form Submission</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -14,7 +14,7 @@
             padding: 20px;
         }
         .email-container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             background-color: #ffffff;
             border-radius: 12px;
@@ -22,7 +22,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1771A3 0%, #0D1B2A 100%);
             padding: 40px 30px;
             text-align: center;
             color: white;
@@ -46,18 +46,18 @@
         }
         .field-container {
             background-color: #f8f9fa;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #1771A3;
             border-radius: 0 8px 8px 0;
             padding: 20px;
             margin-bottom: 20px;
             transition: all 0.3s ease;
         }
         .field-container:hover {
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 5px 15px rgba(23, 113, 163, 0.1);
         }
         .field-label {
             font-weight: 700;
-            color: #4a5568;
+            color: #0D1B2A;
             font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -65,14 +65,22 @@
             display: block;
         }
         .field-value {
-            color: #2d3748;
+            color: #0D1B2A;
             font-size: 16px;
             line-height: 1.5;
             margin: 0;
         }
+        .business-field {
+            background-color: #fff8f0;
+            border-left: 4px solid #F7941D;
+        }
+        .contact-field {
+            background-color: #f0f6fc;
+            border-left: 4px solid #1771A3;
+        }
         .message-field {
-            background-color: #f0f4f8;
-            border-left: 4px solid #38a169;
+            background-color: #f5f8fc;
+            border-left: 4px solid #0D1B2A;
         }
         .message-field .field-value {
             white-space: pre-wrap;
@@ -82,6 +90,16 @@
             border-radius: 8px;
             border: 1px solid #e2e8f0;
         }
+        .row-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .row-container .field-container {
+            flex: 1;
+            margin-bottom: 0;
+            width: calc(50% - 5px);
+        }
         .footer {
             background-color: #f8f9fa;
             padding: 30px;
@@ -90,29 +108,58 @@
         }
         .footer p {
             margin: 0;
-            color: #6b7280;
+            color: #0D1B2A;
             font-size: 14px;
         }
         .timestamp {
-            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
-            border-left: 4px solid #38b2ac;
+            background: linear-gradient(135deg, #f0f6fc 0%, #e6f3ff 100%);
+            border-left: 4px solid #1771A3;
             padding: 15px;
-            margin: 20px 0;
+            margin: 10px 0;
             border-radius: 0 8px 8px 0;
             text-align: center;
         }
         .timestamp p {
             margin: 0;
-            color: #234e52;
+            color: #0D1B2A;
             font-size: 14px;
         }
-        @media (max-width: 600px) {
+        .reply-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #1771A3 0%, #0D1B2A 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: transform 0.3s ease;
+        }
+        .reply-button:hover {
+            transform: translateY(-2px);
+            text-decoration: none;
+            color: white;
+            background: linear-gradient(135deg, #F7941D 0%, #1771A3 100%);
+        }
+        .null-value {
+            color: #a0aec0;
+            font-style: italic;
+        }
+        @media (max-width: 650px) {
             .email-container {
                 margin: 0;
                 border-radius: 0;
             }
             .header, .content, .footer {
                 padding: 20px;
+            }
+            .row-container {
+                flex-direction: column;
+                gap: 0;
+            }
+            .row-container .field-container {
+                margin-bottom: 20px;
+                width: 100%;
             }
         }
     </style>
@@ -128,28 +175,65 @@
 
         <!-- Content -->
         <div class="content">
-            <!-- Name Field -->
+            <!-- Name Field (Full Row) -->
             <div class="field-container">
-                <span class="field-label">👤 Name</span>
+                <span class="field-label">👤 Full Name</span>
                 <p class="field-value">{{ $contactName }}</p>
             </div>
 
-            <!-- Email Field -->
-            <div class="field-container">
-                <span class="field-label">📧 Email Address</span>
-                <p class="field-value">{{ $contactEmail }}</p>
+            <!-- Email and Phone Row -->
+            <div class="row-container">
+                <!-- Email Field -->
+                <div class="field-container">
+                    <span class="field-label">📧 Email Address</span>
+                    <p class="field-value">{{ $contactEmail }}</p>
+                </div>
+
+                <!-- Phone Field -->
+                <div class="field-container contact-field">
+                    <span class="field-label">📞 Phone Number</span>
+                    <p class="field-value">{{ $contactPhone ?: 'Not provided' }}</p>
+                </div>
             </div>
 
-            <!-- Subject Field -->
+            <!-- Business Information Row -->
+            <div class="row-container">
+                <!-- Business Name Field -->
+                <div class="field-container business-field">
+                    <span class="field-label">🏢 Business Name</span>
+                    <p class="field-value">{{ $contactBusinessName ?: 'Not provided' }}</p>
+                </div>
+
+                <!-- Business Category Field -->
+                <div class="field-container business-field">
+                    <span class="field-label">🏷️ Business Category</span>
+                    <p class="field-value">{{ $contactBusinessCategory ?: 'Not provided' }}</p>
+                </div>
+            </div>
+
+            <!-- Subject Field (Full Row) -->
             <div class="field-container">
                 <span class="field-label">📝 Subject</span>
                 <p class="field-value">{{ $contactSubject }}</p>
+            </div>
+
+            <!-- Address Field -->
+            <div class="field-container contact-field">
+                <span class="field-label">📍 Address</span>
+                <p class="field-value">{{ $contactAddress }}</p>
             </div>
 
             <!-- Message Field -->
             <div class="field-container message-field">
                 <span class="field-label">💬 Message</span>
                 <p class="field-value">{{ $contactMessage }}</p>
+            </div>
+
+            <!-- Reply Button -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="mailto:{{ $contactEmail }}?subject=Re: {{ $contactSubject }}" class="reply-button" style="color: white;">
+                    📧 Reply to {{ $contactName }}
+                </a>
             </div>
 
             <!-- Timestamp -->
@@ -162,7 +246,9 @@
         <div class="footer">
             <p>
                 This message was sent from your website's contact form.<br>
-                Please respond directly to the sender's email address.
+            </p>
+            <p style="margin-top: 15px; font-size: 12px; color: #9ca3af;">
+                &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
             </p>
         </div>
     </div>

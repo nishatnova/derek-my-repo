@@ -62,9 +62,9 @@ class ContactController extends Controller
                 return [
                     'contacts' => $contacts->items(),
                     'meta' => [
-                        'current_page' => $contacts->currentPage(),
-                        'total' => $contacts->total(),
-                        'per_page' => $contacts->perPage(),
+                        'limit' => $contacts->perPage(),
+                        'page' => $contacts->currentPage(),
+                        'total' => $contacts->total(), 
                         'last_page' => $contacts->lastPage(),
                     ],
                 ];
