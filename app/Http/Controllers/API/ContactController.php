@@ -87,10 +87,10 @@ class ContactController extends Controller
             $rules = [
                 'name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'string', 'max:191'],
-                'phone' => ['required', 'string', 'max:20'],
+                'phone' => ['nullable', 'string', 'max:20'],
                 'business_name' => ['nullable', 'string', 'max:100'],
                 'business_category' => ['nullable', 'string', 'max:100'],
-                'address' => ['required', 'string', 'max:255'],
+                'address' => ['nullable', 'string', 'max:255'],
                 'subject' => ['required', 'string', 'max:255'],
                 'message' => ['required', 'string'],
             ];

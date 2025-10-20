@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\JwtAuthMiddleware;
 use App\Http\Middleware\RoleMiddleware;
+use Illuminate\Console\Scheduling\Schedule;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -45,4 +46,25 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 500);
             }
         });
-    })->create();
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        // Schedule cleanup of unpaid purchases
+        $schedule->command('auth:cleanup-codes')
+            ->everyTenMinutes()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/cleanup-expired-codes.log'));
+
+        // 2. Cleanup unpaid purchases
+        // Run every hour to check for purchases older than 24 hours
+        $schedule->command('purchases:cleanup-unpaid')
+            ->hourly()
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/cleanup-unpaid-purchases.log'))
+            ->onSuccess(function () {
+                \Illuminate\Support\Facades\Log::info('Unpaid purchases cleanup completed successfully');
+            })
+            ->onFailure(function () {
+                \Illuminate\Support\Facades\Log::error('Unpaid purchases cleanup failed');
+            });
+    })
+    ->create();

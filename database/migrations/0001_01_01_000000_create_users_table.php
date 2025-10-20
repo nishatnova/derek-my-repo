@@ -16,6 +16,11 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('phone')->nullable();
+            $table->string('country')->nullable();
+            $table->string('city')->nullable();
+            $table->string('state')->nullable();
+            $table->string('zip_code')->nullable();
+            $table->string('address')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('profile_photo')->nullable();
@@ -23,6 +28,16 @@ return new class extends Migration
             $table->boolean('is_active')->default(true)->nullable();
             $table->rememberToken();
             $table->timestamps();
+
+
+            $table->index('name');
+            $table->index('email');
+            $table->index('phone');
+            $table->index('created_at');
+            $table->index(['country', 'city']);
+            $table->index(['state', 'city', 'zip_code']);
+            $table->fullText(['country', 'city', 'state', 'zip_code', 'address']);
+            $table->fullText(['name', 'email', 'phone', 'country']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

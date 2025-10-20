@@ -15,38 +15,44 @@ class Product extends Model
         'category',
         'code',
         'description',
+        'fabric',
         'minimum_quantity',
         'per_price',
-        'colors',
-        'sizes',
         'additional_discounts',
-        'photos',
+        'images',
         'is_active',
     ];
 
     protected $casts = [
-        'colors' => 'array',
-        'sizes' => 'array',
-        'photos' => 'array',
+        'images' => 'array',
+        'additional_discounts' => 'array',
         'is_active' => 'boolean',
     ];
 
+    protected $appends = ['images_urls'];
+    protected $hidden = ['images']; 
+
     public const CATEGORIES = [
         'football',
-        'swimming',
-        'soccer',
-        'basketball',
-        'tennis',
-        'ice_skating',
-        'cheerleader',
-        'referee',
+        'rugby',
+        'cricket',
+        'baseball',
+        'aquatics',
         'martial_arts',
-        'cycling',
+        'female_fitness',
+        'team_apparel',
     ];
 
     public static function getCategories(): array
     {
         return self::CATEGORIES;
+    }
+
+    public function getImagesUrlsAttribute()
+    {
+        return array_map(function ($imagePath) {
+            return asset('storage/' . $imagePath); 
+        }, $this->images ?: []);
     }
 
     /**

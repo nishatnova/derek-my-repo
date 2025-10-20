@@ -19,10 +19,8 @@ return new class extends Migration
             $table->longText('description');
             $table->integer('minimum_quantity');
             $table->decimal('per_price', 10, 2);
-            $table->json('colors')->nullable();
-            $table->json('sizes')->nullable();
             $table->json('additional_discounts')->nullable();
-            $table->json('photos')->nullable();
+            $table->json('images')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 

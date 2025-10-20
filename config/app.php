@@ -13,7 +13,8 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'X-treme Sports'),
+    'support_mail' => env('MAIL_FROM_ADDRESS', 'X-treme Sports'),
 
     /*
     |--------------------------------------------------------------------------
